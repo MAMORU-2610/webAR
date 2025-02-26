@@ -6,6 +6,7 @@
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.1.4/dist/mindar-image-aframe.prod.js"></script>
     <script>
+      // カスタムコンポーネント "color-changer" を登録
       AFRAME.registerComponent('color-changer', {
         schema: {
           color1: { type: 'string', default: 'rgba(255, 0, 0, 0.5)' }, // 初期は半透明の赤
@@ -13,8 +14,10 @@
         },
         init: function () {
           this.currentColor = this.data.color1;
+          // 初期色を設定
           this.el.setAttribute('material', 'color', this.currentColor);
-          this.el.addEventListener('click', () => {
+          // mouseup イベントで色を切り替える（onClickだと2回発火する可能性があるため）
+          this.el.addEventListener('mouseup', () => {
             this.currentColor = (this.currentColor === this.data.color1) ? this.data.color2 : this.data.color1;
             this.el.setAttribute('material', 'color', this.currentColor);
           });
@@ -24,13 +27,13 @@
   </head>
   <body>
     <a-scene mindar-image="imageTargetSrc: ./target.mind;" color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
-      <!-- カメラ内に a-cursor を追加。rayOrigin="mouse" によりPC環境でのクリックが有効になります -->
+      <!-- カメラに a-cursor を追加。rayOrigin="mouse" でPC環境のマウス操作を有効に -->
       <a-camera position="0 0 0" look-controls="enabled: false">
         <a-cursor rayOrigin="mouse"></a-cursor>
       </a-camera>
       <!-- 画像ターゲットと連動するエンティティ -->
       <a-entity mindar-image-target="targetIndex: 0">
-        <!-- 半透明の a-plane に color-changer コンポーネントを付与し、クリックで色が切り替わるように -->
+        <!-- 対象タグに class="clickable" を付与。mouseup イベントで色が切り替わります -->
         <a-plane class="clickable" color-changer geometry="primitive: plane; width: 1; height: 1" material="color: rgba(255, 0, 0, 0.5)"></a-plane>
       </a-entity>
     </a-scene>
