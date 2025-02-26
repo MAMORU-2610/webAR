@@ -5,15 +5,14 @@
     <script src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.1.4/dist/mindar-image.prod.js"></script>
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.1.4/dist/mindar-image-aframe.prod.js"></script>
-    <!-- カスタムコンポーネント：タップで色を切り替える -->
     <script>
+      // カスタムコンポーネント：タップで色を切り替える処理を定義
       AFRAME.registerComponent('color-changer', {
         schema: {
-          color1: { type: 'string', default: 'red' },
-          color2: { type: 'string', default: 'green' }
+          color1: { type: 'string', default: '#ff0000' }, // 初期色：赤
+          color2: { type: 'string', default: '#00ff00' }  // 切替色：緑
         },
         init: function () {
-          // 初期色を設定
           this.currentColor = this.data.color1;
           this.el.setAttribute('material', 'color', this.currentColor);
           // タップ（clickイベント）時に色をトグル
@@ -26,13 +25,18 @@
     </script>
   </head>
   <body>
-    <!-- mindar-image属性により、画像ターゲットファイル（.mind）のパスを指定 -->
+    <!-- mindar-image属性により、ターゲットマーカーのファイルパスを指定 -->
     <a-scene mindar-image="imageTargetSrc: ./target.mind;" color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-      <!-- 画像ターゲットと紐付くentity -->
+      <!-- ターゲット画像に対応するエリア -->
       <a-entity mindar-image-target="targetIndex: 0">
-        <!-- a-planeで矩形を表示。wireframe指定で枠線のみを描画 -->
-        <a-plane color-changer geometry="primitive: plane; width: 1; height: 1" material="color: red; wireframe: true"></a-plane>
+        <!-- a-planeで半透明の矩形を表示。ここをタップすると色が切り替わります -->
+        <a-plane 
+          color-changer 
+          geometry="primitive: plane; width: 1; height: 1" 
+          material="color: #ff0000; opacity: 0.5" 
+          position="0 0 0">
+        </a-plane>
       </a-entity>
     </a-scene>
   </body>
