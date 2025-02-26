@@ -1,132 +1,118 @@
-<!DOCTYPE html>
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- A-Frame本体とMindAR用スクリプト -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script>
       document.addEventListener("DOMContentLoaded", function() {
-        const sceneEl = document.querySelector('a-scene');
-        let arSystem;
-        sceneEl.addEventListener('loaded', function () {
-          arSystem = sceneEl.systems["mindar-image-system"];
-          arSystem.start();
+        // 対象となるマーカー用.mindファイルのリスト
+        const mindFiles = [
+          // "target1.mind",
+          // "target2.mind",
+          "target3.mind",
+          "target4.mind"
+        ];
+        
+        // 各シーンを配置するコンテナを作成
+        const container = document.createElement("div");
+        container.id = "scenes-container";
+        document.body.appendChild(container);
+        
+        // 各マーカー用シーンを動的に生成
+        mindFiles.forEach((mindFile, index) => {
+          // a‑scene要素の生成
+          const sceneEl = document.createElement("a-scene");
+          sceneEl.setAttribute("mindar-image", `imageTargetSrc: ${mindFile}; autoStart: false;`);
+          sceneEl.setAttribute("color-space", "sRGB");
+          sceneEl.setAttribute("renderer", "colorManagement: true, physicallyCorrectLights");
+          sceneEl.setAttribute("vr-mode-ui", "enabled: false");
+          sceneEl.setAttribute("device-orientation-permission-ui", "enabled: false");
+          
+          // カメラの生成（各シーン共通）
+          const cameraEl = document.createElement("a-camera");
+          cameraEl.setAttribute("position", "0 0 0");
+          cameraEl.setAttribute("look-controls", "enabled: false");
+          cameraEl.setAttribute("cursor", "fuse: false; rayOrigin: mouse;");
+          cameraEl.setAttribute("raycaster", "near: 10; far: 10000; objects: .clickable");
+          sceneEl.appendChild(cameraEl);
+          
+          // ターゲットエンティティの生成（ここではtargetIndex: 0と仮定）
+          const targetEl = document.createElement("a-entity");
+          targetEl.setAttribute("mindar-image-target", "targetIndex: 0");
+          targetEl.id = `example-target-${index}`;
+          sceneEl.appendChild(targetEl);
+          
+          // 動画表示用のa‑plane生成（初期は透明）
+          const planeEl = document.createElement("a-plane");
+          planeEl.id = `example-plane-${index}`;
+          planeEl.setAttribute("opacity", "0");
+          planeEl.setAttribute("position", "0 0 0");
+          planeEl.setAttribute("rotation", "0 0 0");
+          // geometryはここではwidth:1, height:1.4としていますが、必要に応じて調整してください
+          planeEl.setAttribute("geometry", "primitive: plane; width: 1; height: 1.4");
+          targetEl.appendChild(planeEl);
+          
+          container.appendChild(sceneEl);
+          
+          // シーン読み込み後、ARシステムを開始
+          sceneEl.addEventListener("loaded", function() {
+            const arSystem = sceneEl.systems["mindar-image-system"];
+            arSystem.start();
+          });
+          
+          // 各シーン専用のvideo要素生成（画面外に配置）
+          const videoEl = document.createElement("video");
+          videoEl.id = `video-${index}`;
+          videoEl.setAttribute("src", "target.mp4");
+          videoEl.setAttribute("playsinline", "");
+          videoEl.setAttribute("webkit-playsinline", "");
+          videoEl.style.position = "absolute";
+          videoEl.style.top = "-9999px";
+          videoEl.style.left = "-9999px";
+          document.body.appendChild(videoEl);
+          
+          // ターゲット認識後、一定時間（ここでは2秒）経過後に動画を再生
+          let playTimer = null;
+          targetEl.addEventListener("targetFound", () => {
+            console.log(`target found ${index}`);
+            playTimer = setTimeout(() => {
+              if (videoEl.paused) {
+                // 動画テクスチャとして貼り付け（ここではrepeat/offsetでクリッピング設定も適用）
+                planeEl.setAttribute("material", `src: #${videoEl.id}; repeat: 0.7 0.8; offset: 0.25 0.10; transparent: true; opacity: 0`);
+                // 前回のフェードアニメーションを削除
+                planeEl.removeAttribute("animation__fadein");
+                planeEl.removeAttribute("animation__fadeout");
+                // 動画を先頭に戻して再生開始
+                videoEl.currentTime = 0;
+                videoEl.play();
+                // 2秒かけてフェードイン（opacity 0→1）
+                planeEl.setAttribute("animation__fadein", "property: material.opacity; from: 0; to: 1; dur: 2000; easing: linear");
+              }
+            }, 2000);
+          });
+          
+          // ターゲットを見失った場合、再生タイマーをキャンセル
+          targetEl.addEventListener("targetLost", () => {
+            console.log(`target lost ${index}`);
+            if (playTimer) {
+              clearTimeout(playTimer);
+              playTimer = null;
+            }
+          });
+          
+          // 動画再生終了時はフェードアウトして、テクスチャを解除
+          videoEl.addEventListener("ended", () => {
+            planeEl.setAttribute("animation__fadeout", "property: material.opacity; from: 1; to: 0; dur: 2000; easing: linear");
+            setTimeout(() => {
+              planeEl.removeAttribute("material");
+            }, 2000);
+          });
         });
-        const exampleTarget = document.querySelector('#example-target');
-        const examplePlane = document.querySelector('#example-plane');
-        const video = document.getElementById("video");
-    
-        exampleTarget.addEventListener("targetFound", event => {
-          console.log("target found");
-        });
-        exampleTarget.addEventListener("targetLost", event => {
-          console.log("target lost");
-        });
-    
-        examplePlane.addEventListener("click", event => {
-          console.log("plane click");
-          if (video.paused) {
-            // 再生前にテクスチャを設定し、opacity を 0 にリセット
-            examplePlane.setAttribute("material", "src: #video; repeat: 0.7 0.8; offset: 0.25 0.10; transparent: true; opacity: 0");
-            // 前回のアニメーション設定を削除
-            examplePlane.removeAttribute("animation__fadein");
-            examplePlane.removeAttribute("animation__fadeout");
-            // 動画を先頭に戻して再生開始
-            video.currentTime = 0;
-            video.play();
-            // 2秒かけてフェードイン（opacity 0→1）
-            examplePlane.setAttribute("animation__fadein", "property: material.opacity; from: 0; to: 1; dur: 2000; easing: linear");
-          }
-        });
-    
-        video.addEventListener("ended", function() {
-          // 2秒かけてフェードアウト（opacity 1→0）
-          examplePlane.setAttribute("animation__fadeout", "property: material.opacity; from: 1; to: 0; dur: 2000; easing: linear");
-          // フェードアウト完了後、素材を解除
-          setTimeout(() => {
-            examplePlane.removeAttribute("material");
-          }, 2000);
-        });
-      });
-      
-      // ピンチイン・ピンチアウトでスケールを変更するコンポーネント
-      AFRAME.registerComponent('pinch-scale', {
-        schema: { min: {type: 'number', default: 0.1}, max: {type: 'number', default: 10} },
-        init: function () {
-          this.initialDistance = null;
-          this.initialScale = this.el.object3D.scale.clone();
-          this.handleTouchStart = this.handleTouchStart.bind(this);
-          this.handleTouchMove = this.handleTouchMove.bind(this);
-          this.handleTouchEnd = this.handleTouchEnd.bind(this);
-          const canvas = this.el.sceneEl.canvas;
-          if (canvas) {
-            canvas.addEventListener('touchstart', this.handleTouchStart);
-            canvas.addEventListener('touchmove', this.handleTouchMove);
-            canvas.addEventListener('touchend', this.handleTouchEnd);
-          } else {
-            this.el.sceneEl.addEventListener('renderstart', () => {
-              const canvas = this.el.sceneEl.canvas;
-              canvas.addEventListener('touchstart', this.handleTouchStart);
-              canvas.addEventListener('touchmove', this.handleTouchMove);
-              canvas.addEventListener('touchend', this.handleTouchEnd);
-            });
-          }
-        },
-        remove: function () {
-          const canvas = this.el.sceneEl.canvas;
-          if (canvas) {
-            canvas.removeEventListener('touchstart', this.handleTouchStart);
-            canvas.removeEventListener('touchmove', this.handleTouchMove);
-            canvas.removeEventListener('touchend', this.handleTouchEnd);
-          }
-        },
-        handleTouchStart: function (evt) {
-          if (evt.touches.length === 2) {
-            const dx = evt.touches[0].pageX - evt.touches[1].pageX;
-            const dy = evt.touches[0].pageY - evt.touches[1].pageY;
-            this.initialDistance = Math.sqrt(dx * dx + dy * dy);
-            this.initialScale = this.el.object3D.scale.clone();
-          }
-        },
-        handleTouchMove: function (evt) {
-          if (evt.touches.length === 2 && this.initialDistance !== null) {
-            const dx = evt.touches[0].pageX - evt.touches[1].pageX;
-            const dy = evt.touches[0].pageY - evt.touches[1].pageY;
-            const currentDistance = Math.sqrt(dx * dx + dy * dy);
-            const scaleFactor = currentDistance / this.initialDistance;
-            let newScale = this.initialScale.clone().multiplyScalar(scaleFactor);
-            newScale.x = Math.max(this.data.min, Math.min(newScale.x, this.data.max));
-            newScale.y = Math.max(this.data.min, Math.min(newScale.y, this.data.max));
-            newScale.z = Math.max(this.data.min, Math.min(newScale.z, this.data.max));
-            this.el.object3D.scale.copy(newScale);
-          }
-        },
-        handleTouchEnd: function (evt) {
-          if (evt.touches.length < 2) {
-            this.initialDistance = null;
-          }
-        }
       });
     </script>
   </head>
   <body>
-    <!-- video 要素は画面外に配置 -->
-    <video id="video" src="target.mp4" style="position: absolute; top: -9999px; left: -9999px;" playsinline webkit-playsinline></video>
-    
-    <a-scene mindar-image="imageTargetSrc: target1.mind; autoStart: false;" color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
-      <a-camera position="0 0 0" look-controls="enabled: false" cursor="fuse: false; rayOrigin: mouse;" raycaster="near: 10; far: 10000; objects: .clickable"></a-camera>
-    
-      <a-entity id="example-target" mindar-image-target="targetIndex: 0">
-        <!-- a-plane に pinch-scale コンポーネントを追加（この a-plane に動画テクスチャが適用され、タップやピンチ操作で操作可能） -->
-        <a-plane id="example-plane" class="clickable" 
-                 opacity="0" 
-                 position="0 0 0" 
-                 height="1.4" 
-                 width="1" 
-                 rotation="0 0 0"
-                 pinch-scale>
-        </a-plane>
-      </a-entity>
-    </a-scene>
+    <!-- シーンは上記スクリプトで動的に生成されます -->
   </body>
 </html>
