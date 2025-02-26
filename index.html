@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -25,10 +26,9 @@
         examplePlane.addEventListener("click", event => {
           console.log("plane click");
           if (video.paused) {
-            // 再生前に素材をリセット：テクスチャに動画を設定し、opacityを0にリセット
-            // ここでrepeatとoffsetを使い、動画の表示領域（クリッピング）を設定
+            // 再生前にテクスチャを設定し、opacity を 0 にリセット
             examplePlane.setAttribute("material", "src: #video; repeat: 0.7 0.8; offset: 0.25 0.10; transparent: true; opacity: 0");
-            // 前回のアニメーション設定を削除して初期状態に戻す
+            // 前回のアニメーション設定を削除
             examplePlane.removeAttribute("animation__fadein");
             examplePlane.removeAttribute("animation__fadeout");
             // 動画を先頭に戻して再生開始
@@ -48,18 +48,84 @@
           }, 2000);
         });
       });
+      
+      // ピンチイン・ピンチアウトでスケールを変更するコンポーネント
+      AFRAME.registerComponent('pinch-scale', {
+        schema: { min: {type: 'number', default: 0.1}, max: {type: 'number', default: 10} },
+        init: function () {
+          this.initialDistance = null;
+          this.initialScale = this.el.object3D.scale.clone();
+          this.handleTouchStart = this.handleTouchStart.bind(this);
+          this.handleTouchMove = this.handleTouchMove.bind(this);
+          this.handleTouchEnd = this.handleTouchEnd.bind(this);
+          const canvas = this.el.sceneEl.canvas;
+          if (canvas) {
+            canvas.addEventListener('touchstart', this.handleTouchStart);
+            canvas.addEventListener('touchmove', this.handleTouchMove);
+            canvas.addEventListener('touchend', this.handleTouchEnd);
+          } else {
+            this.el.sceneEl.addEventListener('renderstart', () => {
+              const canvas = this.el.sceneEl.canvas;
+              canvas.addEventListener('touchstart', this.handleTouchStart);
+              canvas.addEventListener('touchmove', this.handleTouchMove);
+              canvas.addEventListener('touchend', this.handleTouchEnd);
+            });
+          }
+        },
+        remove: function () {
+          const canvas = this.el.sceneEl.canvas;
+          if (canvas) {
+            canvas.removeEventListener('touchstart', this.handleTouchStart);
+            canvas.removeEventListener('touchmove', this.handleTouchMove);
+            canvas.removeEventListener('touchend', this.handleTouchEnd);
+          }
+        },
+        handleTouchStart: function (evt) {
+          if (evt.touches.length === 2) {
+            const dx = evt.touches[0].pageX - evt.touches[1].pageX;
+            const dy = evt.touches[0].pageY - evt.touches[1].pageY;
+            this.initialDistance = Math.sqrt(dx * dx + dy * dy);
+            this.initialScale = this.el.object3D.scale.clone();
+          }
+        },
+        handleTouchMove: function (evt) {
+          if (evt.touches.length === 2 && this.initialDistance !== null) {
+            const dx = evt.touches[0].pageX - evt.touches[1].pageX;
+            const dy = evt.touches[0].pageY - evt.touches[1].pageY;
+            const currentDistance = Math.sqrt(dx * dx + dy * dy);
+            const scaleFactor = currentDistance / this.initialDistance;
+            let newScale = this.initialScale.clone().multiplyScalar(scaleFactor);
+            newScale.x = Math.max(this.data.min, Math.min(newScale.x, this.data.max));
+            newScale.y = Math.max(this.data.min, Math.min(newScale.y, this.data.max));
+            newScale.z = Math.max(this.data.min, Math.min(newScale.z, this.data.max));
+            this.el.object3D.scale.copy(newScale);
+          }
+        },
+        handleTouchEnd: function (evt) {
+          if (evt.touches.length < 2) {
+            this.initialDistance = null;
+          }
+        }
+      });
     </script>
   </head>
   <body>
-    <!-- video要素は画面外に配置しておく -->
+    <!-- video 要素は画面外に配置 -->
     <video id="video" src="target.mp4" style="position: absolute; top: -9999px; left: -9999px;" playsinline webkit-playsinline></video>
     
     <a-scene mindar-image="imageTargetSrc: target1.mind; autoStart: false;" color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
-      <a-camera position="0 0 0" look-controls="enabled: true" cursor="fuse: false; rayOrigin: mouse;" raycaster="near: 10; far: 10000; objects: .clickable"></a-camera>
+      <a-camera position="0 0 0" look-controls="enabled: false" cursor="fuse: false; rayOrigin: mouse;" raycaster="near: 10; far: 10000; objects: .clickable"></a-camera>
     
       <a-entity id="example-target" mindar-image-target="targetIndex: 0">
-        <!-- 初期状態は透明。geometryは必要に応じて設定 -->
-        <a-plane id="example-plane" class="clickable" opacity="0" position="0 0 0" height="1" width="1" rotation="0 0 0"></a-plane>
+        <!-- a-plane に pinch-scale コンポーネントを追加（この a-plane に動画テクスチャが適用され、タップやピンチ操作で操作可能） -->
+        <a-plane id="example-plane" class="clickable" 
+                 opacity="0" 
+                 position="0 0 0" 
+                 height="1.4" 
+                 width="1" 
+                 rotation="0 0 0"
+                 pinch-scale>
+        </a-plane>
       </a-entity>
     </a-scene>
   </body>
