@@ -1,40 +1,41 @@
-<!DOCTYPE html>
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.1.4/dist/mindar-image.prod.js"></script>
-    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.1.4/dist/mindar-image-aframe.prod.js"></script>
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script>
-      // カスタムコンポーネント "color-changer" を登録
-      AFRAME.registerComponent('color-changer', {
-        schema: {
-          color1: { type: 'string', default: 'rgba(255, 0, 0, 0.5)' }, // 初期は半透明の赤
-          color2: { type: 'string', default: 'rgba(0, 255, 0, 0.5)' }  // 切替後は半透明の緑
-        },
-        init: function () {
-          this.currentColor = this.data.color1;
-          // 初期色を設定
-          this.el.setAttribute('material', 'color', this.currentColor);
-          // mouseup イベントで色を切り替える（onClickだと2回発火する可能性があるため）
-          this.el.addEventListener('mouseup', () => {
-            this.currentColor = (this.currentColor === this.data.color1) ? this.data.color2 : this.data.color1;
-            this.el.setAttribute('material', 'color', this.currentColor);
-          });
-        }
+      document.addEventListener("DOMContentLoaded", function() {
+        const sceneEl = document.querySelector('a-scene');
+        let arSystem;
+        sceneEl.addEventListener('loaded', function () {
+          arSystem = sceneEl.systems["mindar-image-system"];
+          arSystem.start();
+        });
+        const exampleTarget = document.querySelector('#example-target');
+        const examplePlane = document.querySelector('#example-plane');
+    
+        exampleTarget.addEventListener("targetFound", event => {
+          console.log("target found");
+        });
+        exampleTarget.addEventListener("targetLost", event => {
+          console.log("target lost");
+        });
+    
+        examplePlane.addEventListener("click", event => {
+          console.log("plane click");
+          const currentColor = examplePlane.getAttribute("color");
+          const newColor = currentColor === "blue" ? "red" : "blue";
+          examplePlane.setAttribute("color", newColor);
+        });
       });
     </script>
   </head>
   <body>
-    <a-scene mindar-image="imageTargetSrc: ./target.mind;" color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
-      <!-- カメラに a-cursor を追加。rayOrigin="mouse" でPC環境のマウス操作を有効に -->
-      <a-camera position="0 0 0" look-controls="enabled: false">
-        <a-cursor rayOrigin="mouse"></a-cursor>
-      </a-camera>
-      <!-- 画像ターゲットと連動するエンティティ -->
-      <a-entity mindar-image-target="targetIndex: 0">
-        <!-- 対象タグに class="clickable" を付与。mouseup イベントで色が切り替わります -->
-        <a-plane class="clickable" color-changer geometry="primitive: plane; width: 1; height: 1" material="color: rgba(255, 0, 0, 0.5)"></a-plane>
+    <a-scene mindar-image="imageTargetSrc: target.mind; autoStart: false;" color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+      <a-camera position="0 0 0" look-controls="enabled: false" cursor="fuse: false; rayOrigin: mouse;" raycaster="near: 10; far: 10000; objects: .clickable"></a-camera>
+
+      <a-entity id="example-target" mindar-image-target="targetIndex: 0">
+        <a-plane id="example-plane" class="clickable" color="blue" opaciy="0.5" position="0 0 0" height="1.4" width="1" rotation="0 0 0"></a-plane>
       </a-entity>
     </a-scene>
   </body>
