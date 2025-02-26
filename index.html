@@ -6,16 +6,14 @@
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.1.4/dist/mindar-image-aframe.prod.js"></script>
     <script>
-      // カスタムコンポーネント：タップで色を切り替える処理を定義
       AFRAME.registerComponent('color-changer', {
         schema: {
-          color1: { type: 'string', default: '#ff0000' }, // 初期色：赤
-          color2: { type: 'string', default: '#00ff00' }  // 切替色：緑
+          color1: { type: 'string', default: 'rgba(255, 0, 0, 0.5)' }, // 初期は半透明の赤
+          color2: { type: 'string', default: 'rgba(0, 255, 0, 0.5)' }  // 切替後は半透明の緑
         },
         init: function () {
           this.currentColor = this.data.color1;
           this.el.setAttribute('material', 'color', this.currentColor);
-          // タップ（clickイベント）時に色をトグル
           this.el.addEventListener('click', () => {
             this.currentColor = (this.currentColor === this.data.color1) ? this.data.color2 : this.data.color1;
             this.el.setAttribute('material', 'color', this.currentColor);
@@ -25,18 +23,15 @@
     </script>
   </head>
   <body>
-    <!-- mindar-image属性により、ターゲットマーカーのファイルパスを指定 -->
     <a-scene mindar-image="imageTargetSrc: ./target.mind;" color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
-      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-      <!-- ターゲット画像に対応するエリア -->
+      <!-- カメラ内に a-cursor を追加。rayOrigin="mouse" によりPC環境でのクリックが有効になります -->
+      <a-camera position="0 0 0" look-controls="enabled: false">
+        <a-cursor rayOrigin="mouse"></a-cursor>
+      </a-camera>
+      <!-- 画像ターゲットと連動するエンティティ -->
       <a-entity mindar-image-target="targetIndex: 0">
-        <!-- a-planeで半透明の矩形を表示。ここをタップすると色が切り替わります -->
-        <a-plane 
-          color-changer 
-          geometry="primitive: plane; width: 1; height: 1" 
-          material="color: #ff0000; opacity: 0.5" 
-          position="0 0 0">
-        </a-plane>
+        <!-- 半透明の a-plane に color-changer コンポーネントを付与し、クリックで色が切り替わるように -->
+        <a-plane class="clickable" color-changer geometry="primitive: plane; width: 1; height: 1" material="color: rgba(255, 0, 0, 0.5)"></a-plane>
       </a-entity>
     </a-scene>
   </body>
