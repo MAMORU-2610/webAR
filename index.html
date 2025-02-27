@@ -9,8 +9,7 @@
     <!-- 各マーカ用の動画ファイル（画面外に配置） -->
     <video id="video0" src="target1.mp4" style="position: absolute; top: -9999px; left: -9999px;" playsinline webkit-playsinline></video>
     <video id="video1" src="target2.mp4" style="position: absolute; top: -9999px; left: -9999px;" playsinline webkit-playsinline></video>
-    <video id="video2" src="target1.mp4" style="position: absolute; top: -9999px; left: -9999px;" playsinline webkit-playsinline></video>
-    <video id="video3" src="target2.mp4" style="position: absolute; top: -9999px; left: -9999px;" playsinline webkit-playsinline></video>
+    <video id="video2" src="target2.mp4" style="position: absolute; top: -9999px; left: -9999px;" playsinline webkit-playsinline></video>
     
     <a-scene mindar-image="imageTargetSrc: target.mind; autoStart: false;" 
              color-space="sRGB" 
@@ -37,10 +36,6 @@
         <a-plane id="plane2" class="clickable" visible="false" opacity="0" position="0 0 0" height="1.4" width="1" rotation="0 0 0"></a-plane>
       </a-entity>
       
-      <a-entity id="marker3" mindar-image-target="targetIndex: 3">
-        <a-plane id="plane3" class="clickable" visible="false" opacity="0" position="0 0 0" height="1.4" width="1" rotation="0 0 0"></a-plane>
-      </a-entity>
-      
     </a-scene>
     
     <script>
@@ -56,7 +51,7 @@
         let target1SequenceDone = false;
     
         // マーカのID一覧（marker0～marker3）
-        const markers = ["marker0", "marker1", "marker2", "marker3"];
+        const markers = ["marker0", "marker1", "marker2"];
     
         markers.forEach(function(markerId, index) {
           const markerEl = document.getElementById(markerId);
@@ -106,7 +101,7 @@
           });
     
           // 動画終了時の処理
-          if(index === 1) {
+          if(index === 2) {
             // marker1（target1）の場合、シーケンス管理を実施
             video.addEventListener("ended", function() {
               if (!target1SequenceDone) {
@@ -150,7 +145,7 @@
                   form.addEventListener("submit", function(e) {
                     e.preventDefault();
                     const pass = input.value.trim();
-                    if(pass === "dentsu") {
+                    if(pass === "dentsu" || "DENTSU") {
                       console.log("正解の合言葉です！");
                       video.src = "target1.mp4";
                     } else {
