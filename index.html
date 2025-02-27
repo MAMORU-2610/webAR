@@ -6,9 +6,11 @@
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
   </head>
   <body>
-    <!-- 各マーカ用の動画ファイル（画面外に配置） -->
+    <!-- 各マーカ用の動画ファイル -->
     <video id="video0" src="target1.mp4" style="position: absolute; top: -9999px; left: -9999px;" playsinline webkit-playsinline></video>
-    <video id="video1" src="target2.mp4" style="position: absolute; top: -9999px; left: -9999px;" playsinline webkit-playsinline></video>
+    <!-- marker1 用の video1（今回は通常再生） -->
+    <video id="video1" src="target1.mp4" style="position: absolute; top: -9999px; left: -9999px;" playsinline webkit-playsinline></video>
+    <!-- marker2 用の video2：合言葉シーケンスを実施 -->
     <video id="video2" src="target2.mp4" style="position: absolute; top: -9999px; left: -9999px;" playsinline webkit-playsinline></video>
     
     <a-scene mindar-image="imageTargetSrc: target.mind; autoStart: false;" 
@@ -23,17 +25,20 @@
                 raycaster="near: 10; far: 10000; objects: .clickable">
       </a-camera>
       
-      <!-- 各マーカ毎に a‑plane を配置。初期状態は opacity:0 かつ非表示 -->
+      <!-- マーカーは3種類 -->
       <a-entity id="marker0" mindar-image-target="targetIndex: 0">
-        <a-plane id="plane0" class="clickable" visible="false" opacity="0" position="0 0 0" height="1.4" width="1" rotation="0 0 0"></a-plane>
+        <a-plane id="plane0" class="clickable" visible="false" opacity="0" position="0 0 0" 
+                 height="1.4" width="1" rotation="0 0 0"></a-plane>
       </a-entity>
       
       <a-entity id="marker1" mindar-image-target="targetIndex: 1">
-        <a-plane id="plane1" class="clickable" visible="false" opacity="0" position="0 0 0" height="1.4" width="1" rotation="0 0 0"></a-plane>
+        <a-plane id="plane1" class="clickable" visible="false" opacity="0" position="0 0 0" 
+                 height="1.4" width="1" rotation="0 0 0"></a-plane>
       </a-entity>
       
       <a-entity id="marker2" mindar-image-target="targetIndex: 2">
-        <a-plane id="plane2" class="clickable" visible="false" opacity="0" position="0 0 0" height="1.4" width="1" rotation="0 0 0"></a-plane>
+        <a-plane id="plane2" class="clickable" visible="false" opacity="0" position="0 0 0" 
+                 height="1.4" width="1" rotation="0 0 0"></a-plane>
       </a-entity>
       
     </a-scene>
@@ -47,20 +52,19 @@
           arSystem.start();
         });
     
-        // target1（marker1）のシーケンス管理用フラグ（false:未実行、true:実行済み）
-        let target1SequenceDone = false;
+        // marker2 のシーケンス管理用フラグ（false:未実行、true:実行済み）
+        let marker2SequenceDone = false;
     
-        // マーカのID一覧（marker0～marker3）
+        // マーカーのID一覧（marker0, marker1, marker2）
         const markers = ["marker0", "marker1", "marker2"];
     
         markers.forEach(function(markerId, index) {
           const markerEl = document.getElementById(markerId);
           const planeEl = markerEl.querySelector("a-plane");
-          // 各マーカに対応する動画要素（video0～video3）
           const video = document.getElementById("video" + index);
     
-          // マーカ認識時：自動でフェードイン＆動画再生
-          markerEl.addEventListener("targetFound", event => {
+          // ターゲット発見時：動画再生＆フェードイン
+          markerEl.addEventListener("targetFound", () => {
             console.log(markerId + " target found");
             planeEl.setAttribute("visible", "true");
             if(video.paused) {
@@ -73,8 +77,8 @@
             }
           });
     
-          // マーカロスト時：動画再生をリセット（停止＆先頭に戻す）
-          markerEl.addEventListener("targetLost", event => {
+          // ターゲットロスト時：動画停止＆フェードアウト後完全非表示
+          markerEl.addEventListener("targetLost", () => {
             console.log(markerId + " target lost");
             video.pause();
             video.currentTime = 0;
@@ -86,9 +90,10 @@
             }, 500);
           });
     
-          // クリックで動画再生し直し（動画が停止している場合）
-          planeEl.addEventListener("click", event => {
+          // クリック時：動画再生が停止していれば再生し直す
+          planeEl.addEventListener("click", (e) => {
             console.log(markerId + " plane clicked");
+            e.stopPropagation();
             if(video.paused) {
               planeEl.setAttribute("visible", "true");
               planeEl.setAttribute("material", "src: #video" + index + "; transparent: true; opacity: 0");
@@ -102,15 +107,15 @@
     
           // 動画終了時の処理
           if(index === 2) {
-            // marker1（target1）の場合、シーケンス管理を実施
-            video.addEventListener("ended", function() {
-              if (!target1SequenceDone) {
+            // marker2 (targetIndex:2) の場合、シーケンス管理を実施
+            video.addEventListener("ended", () => {
+              if(!marker2SequenceDone) {
                 planeEl.setAttribute("animation__fadeout", "property: material.opacity; from: 1; to: 0; dur: 2000; easing: linear");
                 setTimeout(() => {
                   planeEl.removeAttribute("material");
                   planeEl.removeAttribute("animation__fadeout");
                   planeEl.setAttribute("visible", "false");
-                  // 合言葉入力フォームの生成
+                  // 合言葉入力フォーム生成
                   const form = document.createElement("form");
                   form.style.position = "absolute";
                   form.style.top = "50%";
@@ -142,28 +147,29 @@
                   form.appendChild(button);
                   document.body.appendChild(form);
     
-                  form.addEventListener("submit", function(e) {
+                  form.addEventListener("submit", (e) => {
                     e.preventDefault();
                     const pass = input.value.trim();
-                    if(pass === "dentsu" || "DENTSU") {
+                    if(pass === "dentsu") {
                       console.log("正解の合言葉です！");
-                      video.src = "target1.mp4";
+                      video.src = "target2.mp4";
                     } else {
                       console.log("合言葉が違います！");
-                      video.src = "target2.mp4";
+                      video.src = "target1.mp4";
                     }
-                    target1SequenceDone = true; // シーケンス完了とする
+                    marker2SequenceDone = true;
                     video.currentTime = 0;
                     video.play();
                     planeEl.setAttribute("visible", "true");
-                    planeEl.setAttribute("material", "src: #video1; transparent: true; opacity: 0");
+                    // marker2用は常に video1 を使うのではなく、video2 の再生結果に合わせる
+                    planeEl.setAttribute("material", "src: #video2; transparent: true; opacity: 0");
                     planeEl.removeAttribute("animation__fadein");
                     planeEl.setAttribute("animation__fadein", "property: material.opacity; from: 0; to: 1; dur: 2000; easing: linear");
                     document.body.removeChild(form);
                   });
                 }, 2000);
               } else {
-                // 既にシーケンス済みなら通常のフェードアウト処理
+                // シーケンス実施済みなら通常のフェードアウト処理
                 planeEl.setAttribute("animation__fadeout", "property: material.opacity; from: 1; to: 0; dur: 2000; easing: linear");
                 setTimeout(() => {
                   planeEl.removeAttribute("material");
@@ -173,8 +179,8 @@
               }
             });
           } else {
-            // その他のマーカの場合は通常のフェードアウト処理
-            video.addEventListener("ended", function() {
+            // marker0 と marker1 は通常のフェードアウト処理
+            video.addEventListener("ended", () => {
               planeEl.setAttribute("animation__fadeout", "property: material.opacity; from: 1; to: 0; dur: 2000; easing: linear");
               setTimeout(() => {
                 planeEl.removeAttribute("material");
